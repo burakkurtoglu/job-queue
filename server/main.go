@@ -12,7 +12,10 @@ import (
 func main() {
 	//http.HandleFunc("/jobs", handler.JobHandler())
 	godotenv.Load()
-	database.InitDb()
+	err := database.InitDb()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	http.HandleFunc("/jobs", internal.InsertDbHandler())
 

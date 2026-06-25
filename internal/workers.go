@@ -44,7 +44,10 @@ func worker() {
 
 		// 0 : waiting, 1: pending, 2: done, 3: failed
 		job.STATUS = 1
-		db.UpdateJobStatusDb(job.STATUS, job.RETRY_COUNT, job.ID)
+		if err := db.UpdateJobStatusDb(job.STATUS, job.RETRY_COUNT, job.ID); err != nil {
+			log.Println("Worker got db status update error:", err)
+			continue
+		}
 		if jobLong > 50 && job.RETRY_COUNT > 3 { // FAILED
 			time.Sleep(time.Microsecond * 10)
 			job.STATUS = 3

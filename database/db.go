@@ -22,7 +22,7 @@ type Data struct {
 var db *sql.DB
 var err error
 
-func InitDb() {
+func InitDb() error {
 
 	host := os.Getenv("DB_HOST")
 	port := os.Getenv("DB_PORT")
@@ -34,7 +34,7 @@ func InitDb() {
 	connSTR := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s", host, port, user, passw, name, sslM)
 	db, err = sql.Open("postgres", connSTR)
 	if err != nil {
-
+		return err
 	}
 
 	queryStr := `CREATE TABLE IF NOT EXISTS jobs(
@@ -49,9 +49,9 @@ func InitDb() {
 
 	_, err = db.Exec(queryStr)
 	if err != nil {
-
+		return err
 	}
-
+	return nil
 }
 
 func InsertDb(Name string, Payload string) error {
