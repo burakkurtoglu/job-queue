@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	db "job-queue/database"
@@ -43,11 +44,17 @@ func InsertDbHandler() http.HandlerFunc {
 		decoder := json.NewDecoder(r.Body)
 		var jb JobRequest
 		if err := decoder.Decode(&jb); err != nil {
-			log.Fatal(err)
+			log.Println("JSON decode error:", err)
+			http.Error(w, "Couldn't decode the request", http.StatusBadRequest)
+			return
 		}
 
-		db.InsertDb(jb.Name, jb.Payload)
-
+		err := db.InsertDb(jb.Name, jb.Payload)
+		if err != nil {
+			log.Println("DB insert error:", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
 		fmt.Println("Data inserted into DB!")
 
 	}
@@ -65,8 +72,16 @@ func StatusHandler() http.HandlerFunc {
 		if err != nil {
 			http.Error(w, "Id couldn't found", http.StatusBadRequest)
 		}
-		data := db.GetJobDb(id)
-
+		data, err := db.GetJobDb(id)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				http.Error(w, "Job not found", http.StatusNotFound)
+				return
+			}
+			log.Println("GetJobDb err:", err)
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(data)
 

@@ -3,7 +3,6 @@ package database
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"os"
 	"time"
 
@@ -35,7 +34,7 @@ func InitDb() {
 	connSTR := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s", host, port, user, passw, name, sslM)
 	db, err = sql.Open("postgres", connSTR)
 	if err != nil {
-		log.Fatal(err)
+
 	}
 
 	queryStr := `CREATE TABLE IF NOT EXISTS jobs(
@@ -50,36 +49,41 @@ func InitDb() {
 
 	_, err = db.Exec(queryStr)
 	if err != nil {
-		log.Fatal(err)
+
 	}
+
 }
 
-func InsertDb(Name string, Payload string) {
+func InsertDb(Name string, Payload string) error {
 
 	queryStr := `INSERT INTO jobs (name, payload)
 	VALUES ($1, $2);`
 
 	_, err = db.Exec(queryStr, Name, Payload)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
+	return nil
 }
 
-func GetJobDb(id int) Data {
+func GetJobDb(id int) (Data, error) {
 
 	queryStr := `SELECT * FROM jobs WHERE id=$1;`
 	DbData := db.QueryRow(queryStr, id)
 	var data Data
 	err = DbData.Scan(&data.ID, &data.NAME, &data.PAYLOAD, &data.STATUS, &data.RETRY_COUNT, &data.CREATED_AT, &data.UPDATED_AT)
 	if err != nil {
-		//log.Fatal(err)
+		return Data{}, err
 	}
-	return data
+	return data, nil
 }
 
-func GetStatusDb() []Data {
+func GetStatusDb() ([]Data, error) {
 	queryStr := `SELECT * FROM jobs WHERE status=0 ORDER BY created_at LIMIT 5;`
 	Job, err := db.Query(queryStr)
+	if err != nil {
+		return nil, err
+	}
 	defer Job.Close()
 	var datas []Data
 
@@ -87,18 +91,20 @@ func GetStatusDb() []Data {
 		var data Data
 		err = Job.Scan(&data.ID, &data.NAME, &data.PAYLOAD, &data.STATUS, &data.RETRY_COUNT, &data.CREATED_AT, &data.UPDATED_AT)
 		if err != nil {
-
+			return nil, err
 		}
 		datas = append(datas, data)
 	}
-	return datas
+	return datas, nil
 }
 
-func UpdateJobStatusDb(status int, retry int, id int) {
+func UpdateJobStatusDb(status int, retry int, id int) error {
 	queryStr := `UPDATE jobs SET status=$1, updated_at=CURRENT_TIMESTAMP, retry_count=$2 WHERE id=$3;`
 	_, err = db.Exec(queryStr, status, retry, id)
 	if err != nil {
+		return err
 	}
+	return nil
 
 	//fmt.Printf("Status of id %d changed successfuly!\n", id)
 }
